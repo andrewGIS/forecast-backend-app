@@ -5,6 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from api.forecast import api as forecast_api
+from api.configs import api as config_api
 
 logger = logging.getLogger()
 
@@ -20,9 +21,11 @@ def create_app():
         }
     })
 
+
     app.config.from_object('config')
 
     app.register_blueprint(forecast_api)
+    app.register_blueprint(config_api)
 
     return app
 
@@ -30,3 +33,5 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)
+
+

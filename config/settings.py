@@ -6,6 +6,8 @@ class BaseConfig():
     RASTER_Y_SIZE = 61  # base model raster height
     RASTER_GEO_TRANSFORM = (34.875, 0.25, 0.0, 65.125, 0.0, -0.25)
     VECTOR_FLD = os.path.normpath('./data/vector')
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 
 class DevConfig(BaseConfig):

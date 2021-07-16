@@ -1,11 +1,19 @@
 import os
+
+from celery.result import AsyncResult
+
+from tasks import celery
+
 import config
 
 from flask import (
     Blueprint,
     request,
-    json
+    json, jsonify
 )
+
+from tasks import create_task
+
 api = Blueprint('forecast', __name__)
 
 vectorFolder = config.VECTOR_FLD
@@ -24,6 +32,28 @@ def make_predict():
 
     fileToSend = os.path.join(vectorFolder,f'{model}.{forecastType}.{date}.{hour}.{group}.geojson')
     # cloud filtered data
+
+    if not os.path.exists(fileToSend):
+        return "No forecast for specific date"
+
     with open(fileToSend) as f:
         data = json.load(f)
     return data
+
+
+@api.route('/test_task/', methods=['GET'])
+def run_task():
+    task_type = request.args.get('type')
+    task = create_task.delay(int(task_type))
+    return jsonify({"task_id": task.id}), 202
+
+
+@api.route('/tasks/<task_id>', methods=["GET"])
+def get_status(task_id):
+    task_result = celery.AsyncResult(task_id)
+    result = {
+        "task_id": task_id,
+        "task_status": task_result.status,
+        "task_result": task_result.result
+    }
+    return jsonify(result), 200
