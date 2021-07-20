@@ -12,7 +12,7 @@ from flask import (
     json, jsonify
 )
 
-from tasks import create_task
+from tasks import create_task, download_file
 
 api = Blueprint('forecast', __name__)
 
@@ -48,12 +48,19 @@ def run_task():
     return jsonify({"task_id": task.id}), 202
 
 
+@api.route('/download/')
+def run_donwload():
+    name = request.args.get('zipname')
+    model = request.args.get('model')
+    task = download_file.delay(name, model)
+    return jsonify({"task_id": task.id}), 202
+
 @api.route('/tasks/<task_id>', methods=["GET"])
 def get_status(task_id):
     task_result = celery.AsyncResult(task_id)
     result = {
         "task_id": task_id,
         "task_status": task_result.status,
-        "task_result": task_result.result
+        #"task_result": task_result.result
     }
     return jsonify(result), 200
