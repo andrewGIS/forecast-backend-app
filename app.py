@@ -1,37 +1,48 @@
 import logging
-import config
+import os
+
+from config.settings import Config
 
 from flask import Flask
 from flask_cors import CORS
+from celery import Celery
 
-from api.forecast import api as forecast_api
-from api.configs import api as config_api
-
-logger = logging.getLogger()
-
+### Instantiate Celery ###
+celery = Celery(
+    __name__,
+    broker=Config.CELERY_BROKER_URL,
+    result_backend=Config.RESULT_BACKEND
+)
 
 def create_app():
 
-    logger.info(f'Starting app in {config.APP_ENV} environment')
-
     app = Flask(__name__)
+
+    # logger.info(f'Starting app in {config} environment')
+
+    CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='config.setting.DevelopmentConfig')
+
+    app.config.from_object(CONFIG_TYPE)
+
+    # Configure the flask app instance# Configure the flask app instance
+    #app.config.from_object('config')
+
+    # CORS
     CORS(app, resources={
         r"/*": {
             "origins": "*"
         }
     })
 
+    # Configure celery
+    celery.conf.update(app.config)
 
-    app.config.from_object('config')
-
-    app.register_blueprint(forecast_api)
-    app.register_blueprint(config_api)
+    register_blueprints(app)
 
     return app
 
-
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)
-
-
+def register_blueprints(app):
+    from api.forecast import api as forecast_api
+    from api.configs import api as config_api
+    app.register_blueprint(forecast_api)
+    app.register_blueprint(config_api)

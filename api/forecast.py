@@ -1,22 +1,17 @@
 import os
 
-from celery.result import AsyncResult
-
-from tasks import celery
-
-import config
-
 from flask import (
     Blueprint,
     request,
-    json, jsonify
+    json,
+    jsonify,
+    current_app
 )
 
+from tasks import celery
 from tasks import create_task, download_file
 
 api = Blueprint('forecast', __name__)
-
-vectorFolder = config.VECTOR_FLD
 
 
 @api.route('/get_forecast/', methods=['GET'])
@@ -27,10 +22,11 @@ def make_predict():
     hour = request.args.get('hour', None)
     group = request.args.get('group', None)
 
-    if not all([model,forecastType, date, hour, group]):
+    if not all([model, forecastType, date, hour, group]):
         return "Not all params specified"
 
-    fileToSend = os.path.join(vectorFolder,f'{model}.{forecastType}.{date}.{hour}.{group}.geojson')
+    vectorFolder = current_app.config['VECTOR_FLD']
+    fileToSend = os.path.join(vectorFolder, f'{model}.{forecastType}.{date}.{hour}.{group}.geojson')
     # cloud filtered data
 
     if not os.path.exists(fileToSend):
