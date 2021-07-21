@@ -30,15 +30,6 @@ def download_file(zipName, model):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    save_path_zip = os.path.join( save_path, f'{zipName}.zip')
+    save_path_zip = os.path.join(save_path, f'{zipName}.zip')
     with urllib.request.urlopen(url) as response, open(save_path_zip, 'wb') as out_file:
         shutil.copyfileobj(response, out_file)
-
-
-
-
-
-
-
-
-
