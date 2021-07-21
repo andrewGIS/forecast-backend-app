@@ -9,7 +9,7 @@ from flask import (
 )
 
 from tasks import celery
-from tasks import create_task, download_file
+from tasks import create_task, download_file, process_new_files
 
 api = Blueprint('forecast', __name__)
 
@@ -30,7 +30,7 @@ def make_predict():
     # cloud filtered data
 
     if not os.path.exists(fileToSend):
-        return "No forecast for specific date"
+        return jsonify({"Error": "No json for specific date"}), 400
 
     with open(fileToSend) as f:
         data = json.load(f)
@@ -50,6 +50,12 @@ def run_donwload():
     model = request.args.get('model')
     task = download_file.delay(name, model)
     return jsonify({"task_id": task.id}), 202
+
+@api.route('/processing/')
+def run_processing():
+    task = process_new_files.delay()
+    return jsonify({"task_id": task.id}), 202
+
 
 @api.route('/tasks/<task_id>', methods=["GET"])
 def get_status(task_id):
