@@ -110,6 +110,7 @@ def process_new_files():
 
                     countDangerLevels = len(eventGroup["subgroups"])
                     eventGroupName = eventGroup["name"]
+                    eventGroupOut = []
 
                     # make true date
                     dateTimeObject = datetime.strptime(archiveDate, '%Y%m%d%H')
@@ -122,7 +123,7 @@ def process_new_files():
                         # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'  # original name
                         f'{model}.{forecastType}.{actualDate}.{eventGroupName}.tif'
                     )
-                    create_template_raster(outRasterPath, bandCount=countDangerLevels)
+                    create_template_raster(outRasterPath)
                     ds = gdal.Open(outRasterPath, gdal.GA_Update)
 
                     for eventSubGroup in eventGroup["subgroups"]:
@@ -153,10 +154,19 @@ def process_new_files():
                         mergedConition = np.stack(conditions, axis=2)
                         # between conditons used or operator (i choose np.any by axis)
                         result = mergedConition.any(axis=2).astype(np.uint8)
-
+                        # apply level of danger to sub condition
                         result = np.where(result != 0, levelCode, 0)
-
-                    ds.GetRasterBand(levelCode).WriteArray(result)
+                        eventGroupOut.append(result)
+                    # before writing calculate min value in each pixel
+                    # it means that in pixel will be writing event with
+                    # higher danger
+                    # most danger is level 1 (in description)
+                    eventGroupOut = np.stack(eventGroupOut, axis=2)
+                    eventGroupOut = np.ma.masked_equal(eventGroupOut, 0.0)
+                    #eventGroupOut = np.min(eventGroupOut, axis=2)
+                    eventGroupOut = eventGroupOut.min(axis=2)
+                    #eventGroupOut = np.where(eventGroupOut == 999999, 0, eventGroupOut)
+                    ds.GetRasterBand(1).WriteArray(eventGroupOut.filled(fill_value=0))
                     ds = None
             # vectorize
             for rasterName in os.listdir(outMaskFolder):
