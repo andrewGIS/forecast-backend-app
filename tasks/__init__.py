@@ -56,18 +56,25 @@ def process_new_files():
     outVektorFolder = current_app.config['VECTOR_FLD']
     eventsGroup = calculation_list()
 
-    # generate list of necessary indicators
-    indicatorsForExtract = set()
-    for eventGroup in eventsGroup:
-        for condition in eventGroup["conditions"]:
-            indicatorsNames = condition.keys()
-            for indicatorName in indicatorsNames:
-                indicatorsForExtract.add(indicatorName)
-
+    # TODO make same model names everywhere
     #models = ['gfs', 'icon']
     models = ['gfs']
 
     for model in models:
+
+        # TODO Refactor Huge nesting
+        # generate list of necessary indicators for each models
+        indicatorsForExtract = set()
+        for eventGroup in eventsGroup:
+            eventSubGroups = eventGroup["subgroups"]
+            for eventSubGroup in eventSubGroups:
+                # TODO refactor getattr
+                conditions = getattr(eventSubGroup, f"conditions_{model}")
+                for condition in conditions:
+                    indicatorsNames = condition.keys()
+                    for indicatorName in indicatorsNames:
+                        indicatorsForExtract.add(indicatorName)
+
         url = modelUrls[model]
         modelDwnFld = os.path.join(dwnFld, model)
         #newZipNames = check_new_zips(url, modelDwnFld, startDate=datetime(2021, 7, 20))
@@ -101,49 +108,56 @@ def process_new_files():
 
                 for eventGroup in eventsGroup:
 
-                    outName = eventGroup["alias"]
+                    countDangerLevels = len(eventGroup["subgroups"])
                     eventGroupName = eventGroup["name"]
 
                     # make true date
                     dateTimeObject = datetime.strptime(archiveDate, '%Y%m%d%H')
                     dateTimeObject = dateTimeObject + timedelta(hours=int(hour))
-                    actualDate = dateTimeObject.strftime("%Y%m%d.%H")
+                    actualDate = dateTimeObject.strftime("%Y%m%d.%H")  # in UTC
 
+                    # outRaster
                     outRasterPath = os.path.join(
                         outMaskFolder,
-                        # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'
+                        # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'  # original name
                         f'{model}.{forecastType}.{actualDate}.{eventGroupName}.tif'
                     )
-
-                    # conditions for event group
-                    conditions = []
-                    for condition in eventGroup["conditions"]:
-                        masks = []
-                        for indicatorName, function in condition.items():
-                            rasterName = merge_file_name(model, archiveDate, hour, indicatorName)
-                            rasterPath = os.path.join(extractFolder, rasterName)
-                            mask = raster_2_binary(rasterPath, function)
-                            masks.append(mask)
-
-                        allSubconditions = np.stack(masks, axis=2)
-                        # if all separate mask under conditions calculate result mask by min
-                        # it mins if one of mask is zero that general condition are also false
-                        # and we need to write zero
-                        result = np.amin(allSubconditions, axis=2)
-
-                        conditions.append(result)
-
-                    mergedConition = np.stack(conditions, axis=2)
-                    # between conditons used or operator (i choose np.any by axis)
-                    result = mergedConition.any(axis=2).astype(np.uint8)
-
-                    create_template_raster(outRasterPath)
+                    create_template_raster(outRasterPath, bandCount=countDangerLevels)
                     ds = gdal.Open(outRasterPath, gdal.GA_Update)
 
-                    ds.GetRasterBand(1).WriteArray(result)
+                    for eventSubGroup in eventGroup["subgroups"]:
 
+                        #outName = eventSubGroup["alias"]
+
+                        levelCode = eventSubGroup.level_code
+
+                        # conditions for event group
+                        conditions = []
+                        # TODO refactor getattr
+                        for condition in getattr(eventSubGroup, f"conditions_{model}"):
+                            masks = []
+                            for indicatorName, function in condition.items():
+                                rasterName = merge_file_name(model, archiveDate, hour, indicatorName)
+                                rasterPath = os.path.join(extractFolder, rasterName)
+                                mask = raster_2_binary(rasterPath, function)
+                                masks.append(mask)
+
+                            allSubconditions = np.stack(masks, axis=2)
+                            # if all separate mask under conditions calculate result mask by min
+                            # it mins if one of mask is zero that general condition are also false
+                            # and we need to write zero
+                            result = np.amin(allSubconditions, axis=2)
+
+                            conditions.append(result)
+
+                        mergedConition = np.stack(conditions, axis=2)
+                        # between conditons used or operator (i choose np.any by axis)
+                        result = mergedConition.any(axis=2).astype(np.uint8)
+
+                        result = np.where(result != 0, levelCode, 0)
+
+                    ds.GetRasterBand(levelCode).WriteArray(result)
                     ds = None
-
             # vectorize
             for rasterName in os.listdir(outMaskFolder):
                 inRasterPath = os.path.join(outMaskFolder, rasterName)

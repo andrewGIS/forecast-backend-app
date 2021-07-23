@@ -55,35 +55,44 @@ def polygonize_raster(inRaster: str, outPath: str, WKID: int, frmt:str="GeoJSON"
 
 
     # map user choose format -> gdal format name
+    # TODO is it possible to vectorize multiband in shape file
     aviableVectorFormats = {
         "GeoJSON": "GeoJSON",
         "shp": "ESRI Shapefile"
     }
     gdalDriverName = aviableVectorFormats[frmt]
 
-    sourceRaster = gdal.Open(inRaster)
-    band = sourceRaster.GetRasterBand(1)
-
-    sr = osr.SpatialReference()
-    sr.ImportFromEPSG(WKID)
-
     driver = ogr.GetDriverByName(gdalDriverName)
     if os.path.exists(outPath):
         driver.DeleteDataSource(outPath)
-    outDatasource = driver.CreateDataSource(outPath)
-    outLayer = outDatasource.CreateLayer("mask", srs=sr)
-    gdal.Polygonize(band, band, outLayer, -1, [], callback=None)
-    outDatasource.Destroy()
+    outDataSource = driver.CreateDataSource(outPath)
+    newField = ogr.FieldDefn('level_risk', ogr.OFTInteger)
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(WKID)
+    outLayer = outDataSource.CreateLayer(f"mask", srs=sr)
+    outLayer.CreateField(newField)
+
+    # Polygonize
+    # Display in reversed order for correct display
+    sourceRaster = gdal.Open(inRaster)
+    bandCount = sourceRaster.RasterCount
+    for bandNum in range(bandCount, 0, -1):
+        #bandNum += 1
+        band = sourceRaster.GetRasterBand(bandNum)
+
+        gdal.Polygonize(band, band, outLayer, 0, [], callback=None)
+
+    outDataSource.Destroy()
     sourceRaster = None
 
 
-def create_template_raster(outPath):
+def create_template_raster(outPath, bandCount=1):
     # Create for target raster the same projection as for the value raster
     # output SpatialReference
     outSpatialRef = osr.SpatialReference()
     outSpatialRef.ImportFromEPSG(4326)
     driver = gdal.GetDriverByName("GTiff")
-    dstDs = driver.Create(outPath, Config.RASTER_X_SIZE, Config.RASTER_Y_SIZE, 1, gdal.GDT_Byte)
+    dstDs = driver.Create(outPath, Config.RASTER_X_SIZE, Config.RASTER_Y_SIZE, bandCount, gdal.GDT_Byte)
     dstDs.SetProjection(outSpatialRef.ExportToWkt())
     dstDs.SetGeoTransform(Config.RASTER_GEO_TRANSFORM)
 
