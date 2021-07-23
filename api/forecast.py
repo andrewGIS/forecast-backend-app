@@ -51,10 +51,11 @@ def run_donwload():
     task = download_file.delay(name, model)
     return jsonify({"task_id": task.id}), 202
 
-@api.route('/processing/')
+@api.route('/processing_debug/')
 def run_processing():
-    task = process_new_files.delay()
-    return jsonify({"task_id": task.id}), 202
+    #task = process_new_files.delay()
+    process_new_files()
+    #return jsonify({"task_id": task.id}), 202
 
 
 @api.route('/tasks/<task_id>', methods=["GET"])
