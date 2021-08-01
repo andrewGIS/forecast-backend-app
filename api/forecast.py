@@ -5,11 +5,12 @@ from flask import (
     request,
     json,
     jsonify,
-    current_app
+    current_app, send_file, make_response
 )
 
 from tasks import celery
 from tasks import create_task, download_file, process_new_files
+from processing.utils import get_index_raster_from_zip
 
 api = Blueprint('forecast', __name__)
 
@@ -67,3 +68,22 @@ def get_status(task_id):
         #"task_result": task_result.result
     }
     return jsonify(result), 200
+
+
+@api.route('/get_index/', methods=["GET"])
+def get_index():
+    model = request.args.get('model')
+    date = request.args.get('date')
+    forecastType = request.args.get('forecastType')
+    hour = request.args.get('hour')
+    indexName = request.args.get('indexName')
+
+    if not all([model, date, forecastType, hour, indexName]):
+        return "Not all params specified"
+
+    file = get_index_raster_from_zip(model, date, forecastType, hour, indexName)
+    return send_file(
+        file,
+        mimetype="image/tif",
+        download_name=f'{model}.{date}{forecastType}.{hour}.{indexName}.tif'
+    )

@@ -2,12 +2,14 @@ from datetime import datetime
 import shutil
 import urllib
 import numpy as np
+from zipfile import ZipFile
 from flask import current_app
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import os
 from config.settings import Config
+import io
 
 
 def parse_file_name(filename: str, parameter) -> str:
@@ -24,15 +26,29 @@ def parse_file_name(filename: str, parameter) -> str:
 
 
 def extract_rasters(inArchive, outPath, indicatorsForExtract):
-
-    from zipfile import ZipFile
-
     with ZipFile(inArchive, 'r') as zipObject:
         listOfFileNames = zipObject.namelist()
         for fileName in listOfFileNames:
             indicator = parse_file_name(fileName, "indicator")
             if indicator in indicatorsForExtract:
                 zipObject.extract(fileName, outPath)
+
+
+def get_index_raster_from_zip(model, date, forecastType, hour, indexName):
+
+    zipFld = Config.DWN_FLD
+
+    # check that model name in existing name
+    if model not in Config.MODELS:
+        return
+
+    inArchive = os.path.join(zipFld, model, f'{date}{forecastType}.zip')
+    out_image = io.BytesIO()
+    with ZipFile(inArchive, 'r') as zipObject:
+        fileToExtract = f'{model}.{date}{forecastType}.{hour}.{indexName}.tif'
+        out_image.write(zipObject.read(fileToExtract))
+    out_image.seek(0)
+    return out_image
 
 
 def raster_2_binary(rasterPath: str, function) -> np.array:
@@ -53,7 +69,7 @@ def raster_2_binary(rasterPath: str, function) -> np.array:
 
 def polygonize_raster(inRaster: str, outPath: str, WKID: int, frmt:str="GeoJSON"):
 
-
+    #TODO now polygons is not intersected
     # map user choose format -> gdal format name
     aviableVectorFormats = {
         "GeoJSON": "GeoJSON",
