@@ -58,7 +58,9 @@ def process_new_files():
 
     # TODO make same model names everywhere
     #models = ['gfs', 'icon']
-    models = ['gfs']
+    #models = ['gfs']
+    # models = ['icon']
+    models = current_app.config['MODELS']
 
     for model in models:
 
@@ -108,7 +110,6 @@ def process_new_files():
 
                 for eventGroup in eventsGroup:
 
-                    countDangerLevels = len(eventGroup["subgroups"])
                     eventGroupName = eventGroup["name"]
                     eventGroupOut = []
 
@@ -121,9 +122,9 @@ def process_new_files():
                     outRasterPath = os.path.join(
                         outMaskFolder,
                         # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'  # original name
-                        f'{model}.{forecastType}.{actualDate}.{eventGroupName}.tif'
+                        f'{model}.{actualDate}.{forecastType}.{eventGroupName}.tif'
                     )
-                    create_template_raster(outRasterPath)
+                    create_template_raster(outRasterPath, model)
                     ds = gdal.Open(outRasterPath, gdal.GA_Update)
 
                     for eventSubGroup in eventGroup["subgroups"]:
@@ -152,7 +153,7 @@ def process_new_files():
                             conditions.append(result)
 
                         mergedConition = np.stack(conditions, axis=2)
-                        # between conditons used or operator (i choose np.any by axis)
+                        # between conditons used OR operator (i choose np.any by axis)
                         result = mergedConition.any(axis=2).astype(np.uint8)
                         # apply level of danger to sub condition
                         result = np.where(result != 0, levelCode, 0)
