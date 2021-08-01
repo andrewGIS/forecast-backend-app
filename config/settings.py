@@ -18,10 +18,7 @@ class Config:
     TESTING = False
     WTF_CSRF_ENABLED = True
 
-    # Base geographical data
-    RASTER_X_SIZE = 161  # base model raster width
-    RASTER_Y_SIZE = 61  # base model raster height
-    RASTER_GEO_TRANSFORM = (34.875, 0.25, 0.0, 65.125, 0.0, -0.25)
+    MODELS = ["gfs", "icon"]
 
     # Folders
     VECTOR_FLD = os.path.normpath('./data/vector')
