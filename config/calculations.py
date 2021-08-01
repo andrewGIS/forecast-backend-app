@@ -1,8 +1,10 @@
 # TODO make same model names everywhere
-class ModelNames:
-    gfs = "gfs"
-    icon = "icon"
+from config.settings import Config
 
+# here stored all names of models
+models = Config.MODELS
+
+# check that conditions named as conditions_{model_name} (conditions_gfs axample)
 class EventSubGroup(object):
 
     def __init__(self, name, alias, level_code, conditions_gfs, conditions_icon=[]):
@@ -32,6 +34,9 @@ def calculation_list():
                         "cape_255-0": lambda x: x > 2000,
                         "dls": lambda x: x > 26,
                         "wmaxshear": lambda x: x > 1100,
+                    }],
+                    conditions_icon=[{
+                        "dls": lambda x: x > 26
                     }]
                 ),
                 EventSubGroup(
@@ -43,6 +48,9 @@ def calculation_list():
                         "cape_255-0": lambda x: x > 1500,
                         "dls": lambda x: x > 21,
                         "wmaxshear": lambda x: x > 850,
+                    }],
+                    conditions_icon=[{
+                        "dls": lambda x: x > 21,
                     }]
                 ),
                 EventSubGroup(
@@ -62,7 +70,10 @@ def calculation_list():
                             "dls": lambda x: x > 15,
                             "wmaxshear": lambda x: x > 500,
                         }
-                    ]
+                    ],
+                    conditions_icon=[{
+                        "dls": lambda x: x > 18,
+                    }]
                 ),
                 EventSubGroup(
                     alias="Шквалы,град допустимый риск",
@@ -84,7 +95,10 @@ def calculation_list():
                             "cape_255-0": lambda x: x > 400,
                             "dls": lambda x: x > 21,
                         }
-                    ]
+                    ],
+                    conditions_icon=[{
+                        "dls": lambda x: x > 15,
+                    }]
                 )
 
             ]
