@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from flask import (
     Blueprint,
@@ -7,10 +8,13 @@ from flask import (
     jsonify,
     current_app, send_file
 )
+from werkzeug import exceptions
 
+from config.models import ModelParams
 from tasks.process_forecast import celery
 from tasks.process_forecast import create_task, download_file, process_new_files
 from processing.utils import get_index_raster_from_zip
+from config.forecast_models import MODELS, models
 
 
 api = Blueprint('forecast', __name__)
@@ -18,20 +22,52 @@ api = Blueprint('forecast', __name__)
 
 @api.route('/get_forecast/', methods=['GET'])
 def get_forecast():
-    model = request.args.get('model', None)  # use default value repalce 'None'
-    forecastType = request.args.get('forecast_type', None)  # use default value repalce 'None'
+    modelName = request.args.get('model', None)  # use default value replace 'None'
+    forecastType = request.args.get('forecast_type', None)  # use default value replace 'None'
     date = request.args.get('date', None)
     hour = request.args.get('hour', None)
     group = request.args.get('group', None)
 
-    if not all([model, forecastType, date, hour, group]):
-        return "Not all params specified"
+    if not all([modelName, forecastType, date, hour, group]):
+        return jsonify(error="Not all params specified"), exceptions.BadRequest.code
+
+    if modelName not in MODELS:
+        return jsonify(
+            error=f"Unknown model, known models are {','.join(MODELS)}"
+        ), exceptions.BadRequest.code
+
+    # TODO move to config
+    forecastTypes = ["00", "12"]
+    if forecastType not in forecastTypes:
+        return jsonify(
+            error=f"Unknown model, known forestTypes are {','.join(forecastTypes)}"
+        ), exceptions.BadRequest.code
+
+    try:
+        dateTimeObject = datetime.strptime(date, '%Y%m%d')
+    except ValueError:
+        return jsonify(
+            error=f"Error in parsing date get, except date in format YYYYmmdd"
+        ), exceptions.BadRequest.code
+
+    availableHours = current_app.config['PROCESSING_HOURS']
+    if hour not in availableHours:
+        return jsonify(
+            error=f"Unknown hour, known hour are {','.join(availableHours)}"
+        ), exceptions.BadRequest.code
+
+    selectedModel: ModelParams = models[modelName]
+    groupsList = [group.name for group in selectedModel.CALCULATIONS]
+    if group not in groupsList:
+        return jsonify(
+            error=f"Unknown group for model {modelName}, known hour are {','.join(groupsList)}"
+        ), exceptions.BadRequest.code
 
     vectorFolder = current_app.config['VECTOR_FLD']
-    fileToSend = os.path.join(vectorFolder, f'{model}.{forecastType}.{date}.{hour}.{group}.geojson')
+    fileToSend = os.path.join(vectorFolder, f'{modelName}.{forecastType}.{date}.{hour}.{group}.geojson')
 
     if not os.path.exists(fileToSend):
-        return jsonify({"Error": "No json for specific date"}), 400
+        return jsonify(error="No json for specific date"), exceptions.BadRequest.code
 
     with open(fileToSend) as f:
         data = json.load(f)
