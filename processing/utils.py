@@ -8,7 +8,10 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import os
+
+from config.forecast_models import models, ModelParams
 from config.settings import Config
+from config.forecast_models import MODELS
 import io
 
 
@@ -39,7 +42,7 @@ def get_index_raster_from_zip(model, date, forecastType, hour, indexName):
     zipFld = Config.DWN_FLD
 
     # check that model name in existing name
-    if model not in Config.MODELS:
+    if model not in MODELS:
         return
 
     inArchive = os.path.join(zipFld, model, f'{date}{forecastType}.zip')
@@ -69,8 +72,6 @@ def raster_2_binary(rasterPath: str, function) -> np.array:
 
 def polygonize_raster(inRaster: str, outPath: str, WKID: int, frmt:str="GeoJSON"):
 
-    #TODO now polygons is not intersected
-    # map user choose format -> gdal format name
     aviableVectorFormats = {
         "GeoJSON": "GeoJSON",
         "shp": "ESRI Shapefile"
@@ -96,49 +97,16 @@ def polygonize_raster(inRaster: str, outPath: str, WKID: int, frmt:str="GeoJSON"
     sourceRaster = None
 
 
-def create_template_raster(outPath, modelName):
+def create_template_raster(outPath, x_size, y_size, geo_transform):
     # Create for target raster the same projection as for the value raster
     # output SpatialReference
-
-    # Base geographical data
-    # TODO different seeting for different model
-    #RASTER_X_SIZE = 161  # base model raster width  #icon 320
-    #RASTER_Y_SIZE = 61  # base model raster height  #icon 120
-    #RASTER_GEO_TRANSFORM = (34.875, 0.25, 0.0, 65.125, 0.0, -0.25)  # icon (34.9375, 0.125, 0.0, 65.0625, 0.0, -0.125)
-
-    class ModelRasterParams(object):
-
-        def __init__(self, RASTER_X_SIZE, RASTER_Y_SIZE, RASTER_GEO_TRANSFORM):
-            self.RASTER_X_SIZE = RASTER_X_SIZE
-            self.RASTER_Y_SIZE = RASTER_Y_SIZE
-            self.RASTER_GEO_TRANSFORM = RASTER_GEO_TRANSFORM
-
-    #TODO all error in one file
-    if modelName not in Config.MODELS:
-        raise ValueError("Invalid model name")
-
-    modelsRasterParams = {
-        "gfs": ModelRasterParams(
-            RASTER_X_SIZE=161,
-            RASTER_Y_SIZE=61,
-            RASTER_GEO_TRANSFORM=(34.875, 0.25, 0.0, 65.125, 0.0, -0.25)
-        ),
-        "icon": ModelRasterParams(
-            RASTER_X_SIZE=320,
-            RASTER_Y_SIZE=120,
-            RASTER_GEO_TRANSFORM=(34.9375, 0.125, 0.0, 65.0625, 0.0, -0.125)
-        )
-    }
-
-    selectedModel: ModelRasterParams = modelsRasterParams[modelName]
-
 
     outSpatialRef = osr.SpatialReference()
     outSpatialRef.ImportFromEPSG(4326)
     driver = gdal.GetDriverByName("GTiff")
-    dstDs = driver.Create(outPath, selectedModel.RASTER_X_SIZE, selectedModel.RASTER_Y_SIZE, 1, gdal.GDT_Byte)
+    dstDs = driver.Create(outPath, x_size, y_size, 1, gdal.GDT_Byte)
     dstDs.SetProjection(outSpatialRef.ExportToWkt())
-    dstDs.SetGeoTransform(selectedModel.RASTER_GEO_TRANSFORM)
+    dstDs.SetGeoTransform(geo_transform)
 
 
 def check_new_zips(url, dwnFld, startDate=datetime(2021, 6, 19)):
@@ -186,9 +154,5 @@ def download_file_util(baseUrl, zipName, model):
         shutil.copyfileobj(response, out_file)
 
     return save_path_zip
-
-
-def merge_file_name(model, date, hour, indicator) -> str:
-    return f'{model}.{date}.{hour}.{indicator}.tif'
 
 

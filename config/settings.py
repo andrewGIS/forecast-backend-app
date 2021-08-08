@@ -18,8 +18,6 @@ class Config:
     TESTING = False
     WTF_CSRF_ENABLED = True
 
-    MODELS = ["gfs", "icon"]
-
     # Folders
     VECTOR_FLD = os.path.normpath('./data/vector')
     EXTRACT_FLD = os.path.normpath('./data/extract')

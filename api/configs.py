@@ -11,3 +11,8 @@ api = Blueprint('configs', __name__)
 def get_avaliable_groups():
     groups = calculations.event_group_list()
     return jsonify(groups)
+
+
+@api.route('/models', methods=['GET'])
+def get_aviable_models():
+    return NotImplementedError
