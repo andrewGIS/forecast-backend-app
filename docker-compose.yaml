@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  backend:
+    # check why empty stout and try to send params
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_APP=application.py
+    image: forecast_backend:latest
+    volumes:
+    - ./data:/flask-app/data
+    #command: python -m flask run
+    command: gunicorn -w 1 -b 0.0.0.0:5000 wsgi:app --worker-class gevent
+    ports:
+    - "5001:5000"
