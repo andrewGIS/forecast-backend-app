@@ -76,12 +76,11 @@ def process_new_files():
         newZipNames = ['2021072100.zip']
 
         if len(newZipNames) == 0:
-            # TODO make logging
+            current_app.logger.info(f'Not found new archives for model {modelName}')
             pass
             # return
 
         current_app.logger.info(f'For {modelName} found new archives {",".join(newZipNames)}')
-        #print(f'For {modelName} found new archives {",".join(newZipNames)}')
 
         for zipName in newZipNames:
             archivePath = download_file_util(url, zipName, modelName)  # './2021051512.zip'

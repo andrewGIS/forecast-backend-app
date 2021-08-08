@@ -1,5 +1,4 @@
 from typing import List, Callable
-# TODO Rename condition_groups in different classes
 
 
 class Condition(object):
