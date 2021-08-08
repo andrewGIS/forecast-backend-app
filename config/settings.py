@@ -17,6 +17,10 @@ class Config:
     DEBUG = False
     TESTING = False
     WTF_CSRF_ENABLED = True
+    # delete 027 hour for not intersections three time for forecasting
+    # all hours are
+    # ('003', '006', '009', '012', '015', '018', '021', '024', '027')
+    PROCESSING_HOURS = ('03', '06', '09', '12', '15', '18', '21', '24')
 
     # Folders
     VECTOR_FLD = os.path.normpath('./data/vector')

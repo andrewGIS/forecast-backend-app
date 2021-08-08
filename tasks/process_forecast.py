@@ -56,6 +56,7 @@ def process_new_files():
     dwnFld = current_app.config['DWN_FLD']
     outMaskFolder = current_app.config['MASK_FLD']
     outVektorFolder = current_app.config['VECTOR_FLD']
+    processingHours = current_app.config['PROCESSING_HOURS']
 
     for modelName in models:
 
@@ -96,10 +97,7 @@ def process_new_files():
 
             extract_rasters(archivePath, extractFolder, indicatorsForExtract)
 
-            # delete 027 hour for not intersections three time for forecasting
-            hours = ('003', '006', '009', '012', '015', '018', '021', '024')
-
-            for hour in hours:
+            for hour in processingHours:
 
                 # squalls groups
                 for eventGroup in modelParams.CALCULATIONS:
@@ -135,7 +133,8 @@ def process_new_files():
                         for conditionGroup in eventSubGroup.condition_groups:
                             masks = []
                             for condition in conditionGroup.conditions:
-                                rasterName = f'{modelName}.{archiveDate}.{hour}.{condition.index_name}.tif'
+                                # TODO Refactor format for input file
+                                rasterName = f'{modelName}.{archiveDate}.0{hour}.{condition.index_name}.tif'
                                 rasterPath = os.path.join(extractFolder, rasterName)
                                 mask = raster_2_binary(rasterPath, condition.calculation)
                                 masks.append(mask)
