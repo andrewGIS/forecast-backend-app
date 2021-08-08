@@ -9,7 +9,6 @@ from osgeo import osr
 from osgeo import ogr
 import os
 
-from config.forecast_models import models, ModelParams
 from config.settings import Config
 from config.forecast_models import MODELS
 import io

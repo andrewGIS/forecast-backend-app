@@ -5,18 +5,19 @@ from flask import (
     request,
     json,
     jsonify,
-    current_app, send_file, make_response
+    current_app, send_file
 )
 
-from tasks import celery
-from tasks import create_task, download_file, process_new_files
+from tasks.process_forecast import celery
+from tasks.process_forecast import create_task, download_file, process_new_files
 from processing.utils import get_index_raster_from_zip
+
 
 api = Blueprint('forecast', __name__)
 
 
 @api.route('/get_forecast/', methods=['GET'])
-def make_predict():
+def get_forecast():
     model = request.args.get('model', None)  # use default value repalce 'None'
     forecastType = request.args.get('forecast_type', None)  # use default value repalce 'None'
     date = request.args.get('date', None)
@@ -28,7 +29,6 @@ def make_predict():
 
     vectorFolder = current_app.config['VECTOR_FLD']
     fileToSend = os.path.join(vectorFolder, f'{model}.{forecastType}.{date}.{hour}.{group}.geojson')
-    # cloud filtered data
 
     if not os.path.exists(fileToSend):
         return jsonify({"Error": "No json for specific date"}), 400
@@ -46,17 +46,18 @@ def run_task():
 
 
 @api.route('/download/')
-def run_donwload():
+def run_download():
     name = request.args.get('zipname')
     model = request.args.get('model')
     task = download_file.delay(name, model)
-    return jsonify({"task_id": task.id}), 202
+    return jsonify({"task_id": task.id}), 200
+
 
 @api.route('/processing_debug/')
 def run_processing():
-    #task = process_new_files.delay()
+    # TODO handler error
     process_new_files()
-    #return jsonify({"task_id": task.id}), 202
+    return jsonify('ok'), 200
 
 
 @api.route('/tasks/<task_id>', methods=["GET"])

@@ -1,4 +1,3 @@
-import logging
 import os
 
 from config.settings import Config
@@ -18,14 +17,9 @@ def create_app():
 
     app = Flask(__name__)
 
-    # logger.info(f'Starting app in {config} environment')
-
     CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='config.setting.DevelopmentConfig')
 
     app.config.from_object(CONFIG_TYPE)
-
-    # Configure the flask app instance# Configure the flask app instance
-    #app.config.from_object('config')
 
     # CORS
     CORS(app, resources={
@@ -41,8 +35,9 @@ def create_app():
 
     return app
 
-def register_blueprints(app):
-    from api.forecast import api as forecast_api
-    from api.configs import api as config_api
-    app.register_blueprint(forecast_api)
-    app.register_blueprint(config_api)
+
+def register_blueprints(app: Flask):
+    from api.v1.forecast import api as forecast_api
+    from api.v1.configs import api as config_api
+    app.register_blueprint(forecast_api, url_prefix="/api/v1")
+    app.register_blueprint(config_api, url_prefix="/api/v1")
