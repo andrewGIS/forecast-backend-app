@@ -1,4 +1,5 @@
 amqp==5.0.6
+attrs==21.2.0
 beautifulsoup4==4.9.3
 billiard==3.6.4.0
 bs4==0.0.1
@@ -14,19 +15,25 @@ colorama==0.4.4
 dataclasses==0.6
 dnspython==1.16.0
 eventlet==0.31.1
+flasgger==0.9.5
 Flask==2.0.1
 Flask-Cors==3.0.10
+GDAL @ file:///D:/Work/_new_features/forecast/app_python/GDAL-3.3.1-cp38-cp38-win_amd64.whl
 greenlet==1.1.0
 idna==3.2
 importlib-metadata==4.6.1
 itsdangerous==2.0.1
 Jinja2==3.0.1
+jsonschema==3.2.0
 kombu==5.1.0
 MarkupSafe==2.0.1
+mistune==0.8.4
 numpy==1.19.5
 prompt-toolkit==3.0.19
+pyrsistent==0.18.0
 python-dotenv==0.18.0
 pytz==2021.1
+PyYAML==5.4.1
 redis==3.5.3
 requests==2.26.0
 six==1.16.0

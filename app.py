@@ -1,6 +1,8 @@
 # TODO rewrite all with RestPlus library
 import os
 
+from flasgger import Swagger
+
 from config.settings import Config
 
 from flask import Flask
@@ -17,6 +19,30 @@ celery = Celery(
 def create_app():
 
     app = Flask(__name__)
+
+    # Swagger
+    app.config['SWAGGER'] = {
+        'title': 'Forecast api',
+        'uiversion': 3
+    }
+    template = {
+        "swagger": "2.0",
+        "info": {
+            "title": "My API",
+            "description": "API for my data",
+            "contact": {
+                "responsibleOrganization": "ME",
+                "responsibleDeveloper": "Me",
+                "email": "me@me.com",
+                "url": "www.me.com",
+            },
+            "termsOfService": "http://me.com/terms",
+            "version": "1.0.0"
+        },
+        "host": "mysite.com",  # overrides localhost:500
+        "basePath": "/api",  # base bash for blueprint registration
+    }
+    swagger = Swagger(app, template=template)
 
     CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='config.setting.DevelopmentConfig')
 

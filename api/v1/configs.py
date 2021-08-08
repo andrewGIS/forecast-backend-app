@@ -12,6 +12,24 @@ api = Blueprint('configs', __name__)
 
 @api.route('/models', methods=['GET'])
 def get_available_models():
+    """Endpoint returning a list of forecast models names.
+    ---
+    definitions:
+      Models:
+        type: object
+        properties:
+          models:
+            type: array
+            items:
+              $ref: '#/definitions/ModelName'
+      ModelName:
+        type: string
+    responses:
+      200:
+        description: A list of available models name
+        schema:
+          $ref: '#/definitions/ModelName'
+    """
     return jsonify({"models": MODELS}), 200
 
 
