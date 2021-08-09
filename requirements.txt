@@ -18,7 +18,6 @@ eventlet==0.31.1
 flasgger==0.9.5
 Flask==2.0.1
 Flask-Cors==3.0.10
-GDAL @ file:///D:/Work/_new_features/forecast/app_python/GDAL-3.3.1-cp38-cp38-win_amd64.whl
 greenlet==1.1.0
 idna==3.2
 importlib-metadata==4.6.1
