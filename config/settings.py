@@ -31,7 +31,7 @@ class Config:
     # Settings applicable to all environments
     SECRET_KEY = os.getenv('SECRET_KEY', default='A very terrible secret key.')
 
-    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL ')
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
     RESULT_BACKEND = os.getenv('RESULT_BACKEND')
 
 

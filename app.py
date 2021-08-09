@@ -39,7 +39,7 @@ def create_app():
             "termsOfService": "http://me.com/terms",
             "version": "1.0.0"
         },
-        "host": "mysite.com",  # overrides localhost:500
+        "host": "mysite.com",  # overrides localhost:5000
         "basePath": "/api",  # base bash for blueprint registration
     }
     swagger = Swagger(app, template=template)

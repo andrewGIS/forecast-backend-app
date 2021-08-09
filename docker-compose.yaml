@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.4"
 services:
   backend:
     # check why empty stout and try to send params
@@ -12,3 +12,25 @@ services:
     command: gunicorn -w 1 -b 0.0.0.0:5000 wsgi:app --worker-class gevent
     ports:
     - "5001:5000"
+  redis:
+    image: redis:latest
+  api-worker:
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379
+      - RESULT_BACKEND=redis://redis:6379
+    image: forecast_backend:latest
+    volumes:
+      - "D://Work//_new_features//forecast//app_python//data:/flask-app/data"
+    command: celery -A celery_worker.celery worker --pool=solo --loglevel=info
+    depends_on:
+      - redis
+      - api-beat
+  api-beat:
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379
+      - RESULT_BACKEND=redis://redis:6379
+    image: forecast_backend:latest
+    command: celery -A celery_worker.celery beat --loglevel=info
+    depends_on:
+      - redis
+      - backend
