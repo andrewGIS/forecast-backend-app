@@ -21,11 +21,6 @@ from processing.utils import (
     polygonize_raster
 )
 
-modelUrls = {
-    "icon": "http://84.201.155.104/icon-ural/",
-    "gfs": "http://84.201.155.104/gfs-ural/",
-}
-
 
 @celery.task(name="app.tasks.create_task")
 def create_task(task_type):
@@ -57,6 +52,7 @@ def process_new_files():
     outMaskFolder = current_app.config['MASK_FLD']
     outVektorFolder = current_app.config['VECTOR_FLD']
     processingHours = current_app.config['PROCESSING_HOURS']
+    startDateString = current_app.config['FIRST_ZIP_DATE']
 
     for modelName in models:
 
@@ -73,13 +69,16 @@ def process_new_files():
 
         url = modelParams.DOWNLOAD_URL
         modelDwnFld = os.path.join(dwnFld, modelName)
-        # newZipNames = check_new_zips(url, modelDwnFld, startDate=datetime(2021, 7, 20))
+        newZipNames = check_new_zips(
+            url,
+            modelDwnFld,
+            startDate=datetime.strptime(startDateString, "%Y%m%d")
+        )
         newZipNames = ['2021072100.zip']
 
         if len(newZipNames) == 0:
             current_app.logger.info(f'Not found new archives for model {modelName}')
-            pass
-            # return
+            continue
 
         current_app.logger.info(f'For {modelName} found new archives {",".join(newZipNames)}')
 
@@ -114,7 +113,7 @@ def process_new_files():
                     outRasterPath = os.path.join(
                         outMaskFolder,
                         # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'  # original name
-                        f'{modelName}.{actualDate}.{forecastType}.{eventGroupName}.tif'   # with true date
+                        f'{modelName}.{forecastType}.{actualDate}.{eventGroupName}.tif'   # with true date
                     )
                     create_template_raster(
                         outRasterPath,
