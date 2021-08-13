@@ -1,13 +1,15 @@
+#TODO host to env , folder to env,
 version: "3.4"
 services:
   backend:
     # check why empty stout and try to send params
     environment:
-      - PYTHONUNBUFFERED=1
+      - CONFIG_TYPE=config.settings.ProductionConfig
       - FLASK_APP=application.py
+      - FIRST_ZIP_DATE=20210809 # in YYYYmmdd format
     image: forecast_backend:latest
     volumes:
-    - ./data:/flask-app/data
+      - "D://Work//_new_features//forecast//app_python//data:/flask-app/data"
     #command: python -m flask run
     command: gunicorn -w 1 -b 0.0.0.0:5000 wsgi:app --worker-class gevent
     ports:
@@ -18,6 +20,8 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379
       - RESULT_BACKEND=redis://redis:6379
+      - CONFIG_TYPE=config.settings.ProductionConfig
+      - FIRST_ZIP_DATE=20210809
     image: forecast_backend:latest
     volumes:
       - "D://Work//_new_features//forecast//app_python//data:/flask-app/data"
@@ -27,8 +31,10 @@ services:
       - api-beat
   api-beat:
     environment:
+      - CONFIG_TYPE=config.settings.ProductionConfig
       - CELERY_BROKER_URL=redis://redis:6379
       - RESULT_BACKEND=redis://redis:6379
+      - FIRST_ZIP_DATE=20210809
     image: forecast_backend:latest
     command: celery -A celery_worker.celery beat --loglevel=info
     depends_on:
