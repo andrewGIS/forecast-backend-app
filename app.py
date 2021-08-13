@@ -20,6 +20,10 @@ def create_app():
 
     app = Flask(__name__)
 
+    CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='config.settings.DevelopmentConfig')
+
+    app.config.from_object(CONFIG_TYPE)
+
     # Swagger
     app.config['SWAGGER'] = {
         'title': 'Forecast api',
@@ -28,25 +32,21 @@ def create_app():
     template = {
         "swagger": "2.0",
         "info": {
-            "title": "My API",
-            "description": "API for my data",
+            "title": "Forecast API",
+            "description": "API for forecast project in GIS center",
             "contact": {
-                "responsibleOrganization": "ME",
-                "responsibleDeveloper": "Me",
-                "email": "me@me.com",
-                "url": "www.me.com",
+                "responsibleOrganization": "GIS center PSU",
+                "responsibleDeveloper": "Andrew Tarasov",
+                # "email": "me@me.com",
+                # "url": "www.me.com",
             },
-            "termsOfService": "http://me.com/terms",
+            # "termsOfService": "http://me.com/terms",
             "version": "1.0.0"
         },
-        "host": "mysite.com",  # overrides localhost:5000
-        "basePath": "/api",  # base bash for blueprint registration
+        "host": app.config.get('HOST'),  # overrides localhost:5000
+        # "basePath": "/api",  # base bash for blueprint registration
     }
     swagger = Swagger(app, template=template)
-
-    CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='config.setting.DevelopmentConfig')
-
-    app.config.from_object(CONFIG_TYPE)
 
     # CORS
     CORS(app, resources={
