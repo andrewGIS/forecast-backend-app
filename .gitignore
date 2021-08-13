@@ -220,3 +220,4 @@ data/
 .idea/*
 .env
 celerybeat-*
+forecast_backend.tar
