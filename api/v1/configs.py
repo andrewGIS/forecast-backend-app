@@ -35,8 +35,36 @@ def get_available_models():
 
 @api.route('/event_groups', methods=['GET'])
 def get_available_groups():
+    """Endpoint returning a list of subgroup for model.
+    ---
+    parameters:
+    - name: model
+      in: query
+      type: string
+      enum: ['gfs', 'icon']
+      required: true
+      default: 'gfs'
+    definitions:
+      Groups:
+        type: object
+        properties:
+          groups:
+            type: array
+            items:
+              $ref: '#/definitions/Group'
+      Group:
+        type: object
+        properties:
+            name:
+              type: string
+            alias:
+              type: string
+    responses:
+      200:
+        description: A list of available group for model
+    """
     # TODO status ok with class
-    modelName = request.args.get('model_name')
+    modelName = request.args.get('model')
     selectedModel: ModelParams = models[modelName]
     groupsList = [{"name": group.name, "alias": group.alias} for group in selectedModel.CALCULATIONS]
     return jsonify({"groups": groupsList}), 200
