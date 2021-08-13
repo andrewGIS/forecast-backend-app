@@ -13,7 +13,7 @@ class Config:
     configuration settings applicable to all environments.
     """
     # Default settings
-    FLASK_ENV = 'development'
+
     DEBUG = False
     TESTING = False
     WTF_CSRF_ENABLED = True
@@ -25,27 +25,35 @@ class Config:
     # Folders
     VECTOR_FLD = os.path.normpath('./data/vector')
     EXTRACT_FLD = os.path.normpath('./data/extract')
+    # TODO rename mask folder
     MASK_FLD = os.path.normpath('./data/masks')
     DWN_FLD = os.path.normpath('./data/download')
 
     # Settings applicable to all environments
+    FLASK_ENV = os.getenv('SECRET_KEY', default='development')
     SECRET_KEY = os.getenv('SECRET_KEY', default='A very terrible secret key.')
-
     CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
     RESULT_BACKEND = os.getenv('RESULT_BACKEND')
+    FIRST_ZIP_DATE = os.getenv("FIRST_ZIP_DATE")  # in YYYYmmdd format
 
 
 class DevelopmentConfig(Config):
+    FLASK_ENV = 'development'
     DEBUG = True
+    HOST = 'localhost:5000'
 
 
 class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     MAIL_SUPPRESS_SEND = True
+    FIRST_ZIP_DATE = "20210811"
     #SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(basedir, 'test.db')
 
 
 class ProductionConfig(Config):
     FLASK_ENV = 'production'
+    DEBUG = False
+    HOST = "ogs.psu.ru:5001"
+    #FIRST_ZIP_DATE = "20210809"
     #SQLALCHEMY_DATABASE_URI = os.getenv('PROD_DATABASE_URI', default="sqlite:///" + os.path.join(basedir, 'prod.db'))
