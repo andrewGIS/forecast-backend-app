@@ -74,7 +74,7 @@ def process_new_files():
             modelDwnFld,
             startDate=datetime.strptime(startDateString, "%Y%m%d")
         )
-        newZipNames = ['2021072100.zip']
+        #newZipNames = ['2021072100.zip']
 
         if len(newZipNames) == 0:
             current_app.logger.info(f'Not found new archives for model {modelName}')
