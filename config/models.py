@@ -48,11 +48,13 @@ class ModelParams(object):
                  RASTER_Y_SIZE,
                  RASTER_GEO_TRANSFORM,
                  DOWNLOAD_URL,
-                 CALCULATIONS: List[EventGroup]
+                 CALCULATIONS: List[EventGroup],
+                 INDEXES: List[str]
     ):
         self.RASTER_X_SIZE = RASTER_X_SIZE
         self.RASTER_Y_SIZE = RASTER_Y_SIZE
         self.RASTER_GEO_TRANSFORM = RASTER_GEO_TRANSFORM
         self.DOWNLOAD_URL = DOWNLOAD_URL
         self.CALCULATIONS = CALCULATIONS
+        self.INDEXES = INDEXES
 
