@@ -9,6 +9,7 @@ from osgeo import osr
 from osgeo import ogr
 import os
 
+
 from config.settings import Config
 from config.forecast_models import MODELS
 import io
@@ -47,7 +48,7 @@ def get_index_raster_from_zip(model, date, forecastType, hour, indexName):
     inArchive = os.path.join(zipFld, model, f'{date}{forecastType}.zip')
     out_image = io.BytesIO()
     with ZipFile(inArchive, 'r') as zipObject:
-        fileToExtract = f'{model}.{date}{forecastType}.{hour}.{indexName}.tif'
+        fileToExtract = f'{model}.{date}{forecastType}.0{hour}.{indexName}.tif'
         out_image.write(zipObject.read(fileToExtract))
     out_image.seek(0)
     return out_image
