@@ -68,3 +68,33 @@ def get_available_groups():
     selectedModel: ModelParams = models[modelName]
     groupsList = [{"name": group.name, "alias": group.alias} for group in selectedModel.CALCULATIONS]
     return jsonify({"groups": groupsList}), 200
+
+
+@api.route('/indexes', methods=['GET'])
+def get_available_indexes():
+    """Endpoint returning a list of available indexes for model
+        ---
+        parameters:
+        - name: model
+          in: query
+          type: string
+          enum: ['gfs', 'icon']
+          required: true
+          default: 'gfs'
+        definitions:
+          Indexes:
+            type: object
+            properties:
+              indexes:
+                type: array
+                items:
+                  $ref: '#/definitions/Index'
+          Index:
+            type: string
+        responses:
+          200:
+            description: A list of available indexes for model
+    """
+    modelName = request.args.get('model')
+    selectedModel: ModelParams = models[modelName]
+    return jsonify({"indexes": selectedModel.INDEXES}), 200
