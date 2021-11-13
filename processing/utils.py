@@ -3,7 +3,6 @@ import shutil
 import urllib
 import numpy as np
 from zipfile import ZipFile
-from flask import current_app
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
@@ -11,7 +10,7 @@ import os
 
 
 from config.settings import Config
-from config.forecast_models import MODELS
+from config.used_models import MODELS
 import io
 
 
@@ -60,7 +59,7 @@ def raster_2_binary(rasterPath: str, function) -> np.array:
     condition in function
     :param rasterPath: path to input raster
     :param function: function for condition
-    :return:
+    :return: np.array
     """
     ds = gdal.Open(rasterPath)
     arr = ds.GetRasterBand(1).ReadAsArray()
@@ -125,6 +124,7 @@ def check_new_zips(url, dwnFld, startDate=datetime(2021, 6, 19)):
     # special filter for checking new archive
     # new archive is archive that is not in dwn folder
     def check_that_zip_new(zipName):
+        # TODO get dwn fld from config
         dnwPath = os.path.join(dwnFld, zipName)
         isExists = os.path.exists(dnwPath)
         if isExists:
@@ -136,8 +136,7 @@ def check_new_zips(url, dwnFld, startDate=datetime(2021, 6, 19)):
     return list(filter(check_that_zip_new, grabbedNames))
 
 
-def download_file_util(baseUrl, zipName, model):
-    dwnFld = current_app.config['DWN_FLD']
+def download_file_util(baseUrl, zipName, model, dwnFld):
 
     url = f'{baseUrl}/{zipName}'
 

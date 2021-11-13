@@ -4,8 +4,8 @@ from flask import (
     request
 )
 
-from config.forecast_models import MODELS, models
-from config.models import ModelParams
+from config.used_models import MODELS, models
+from models.forecast_models import ModelParams
 
 api = Blueprint('configs', __name__)
 

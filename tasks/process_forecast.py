@@ -2,16 +2,19 @@ import os
 import shutil
 import time
 import urllib
+from typing import List
+
 import numpy as np
 from osgeo import gdal
 from datetime import datetime, timedelta
-from config.forecast_models import models
+from config.used_models import models
+from config.calculations import usedIndexes
 
 
 from app import celery
 from flask import current_app
 
-from config.models import ModelParams
+from models.forecast_models import ModelParams
 from processing.utils import (
     check_new_zips,
     download_file_util,
@@ -48,133 +51,125 @@ def download_file(zipName, model):
 
 @celery.task(name="app.tasks.check_new_files")
 def process_new_files():
+
     dwnFld = current_app.config['DWN_FLD']
     outMaskFolder = current_app.config['MASK_FLD']
-    outVektorFolder = current_app.config['VECTOR_FLD']
+    outVectorFolder = current_app.config['VECTOR_FLD']
     processingHours = current_app.config['PROCESSING_HOURS']
     startDateString = current_app.config['FIRST_ZIP_DATE']
+    extractFolder = current_app.config['EXTRACT_FLD']
 
     for modelName in models:
+        modelParams = models[modelName]
 
-        modelParams: ModelParams = models[modelName]
+        newFiles = check_new_files(modelName, modelParams, startDateString, dwnFld)
+        newFiles = ['2021081012.zip']
+        newFiles = ['2021072100.zip']
+        newDates = [x.split('.zip')[0] for x in newFiles]
+        current_app.logger.info(f'checking new files end for model {modelName}')
 
-        # TODO Refactor Huge nesting
-        # generate list of necessary indicators for each models
-        indicatorsForExtract = set()
-        for eventGroup in modelParams.CALCULATIONS:
-            for eventSubGroup in eventGroup.subgroups:
-                for conditionGroup in eventSubGroup.condition_groups:
-                    for condition in conditionGroup.conditions:
-                        indicatorsForExtract.add(condition.index_name)
+        download_files(newFiles, modelName, modelParams, dwnFld)
+        current_app.logger.info(f'downloading ends for model {modelName}')
 
-        url = modelParams.DOWNLOAD_URL
-        modelDwnFld = os.path.join(dwnFld, modelName)
-        newZipNames = check_new_zips(
-            url,
-            modelDwnFld,
-            startDate=datetime.strptime(startDateString, "%Y%m%d")
-        )
-        #newZipNames = ['2021072100.zip']
+        dwnModelFld = os.path.join(dwnFld, modelName)
+        extract_files(newFiles, dwnModelFld, modelParams, extractFolder)
+        current_app.logger.info(f'extracting ends for model {modelName}')
 
-        if len(newZipNames) == 0:
-            current_app.logger.info(f'Not found new archives for model {modelName}')
-            continue
-
-        current_app.logger.info(f'For {modelName} found new archives {",".join(newZipNames)}')
-
-        for zipName in newZipNames:
-            archivePath = download_file_util(url, zipName, modelName)  # './2021051512.zip'
-            archiveDate = os.path.basename(archivePath).split('.zip')[0]  # 2021051512
-            forecastType = '00' if archiveDate.endswith('00') else '12'
-            extractFolder = os.path.join(current_app.config['EXTRACT_FLD'], archiveDate)
-
-            # check that folder exists
-            listFolders = [extractFolder]
-            for fld in listFolders:
-                if not os.path.exists(fld):
-                    os.mkdir(fld)
-
-            extract_rasters(archivePath, extractFolder, indicatorsForExtract)
-
+        created_masks = []
+        for newDate in newDates:
+            extractDateFolder = os.path.join(current_app.config['EXTRACT_FLD'], newDate)
+            forecastType = '00' if newDate.endswith('00') else '12'
             for hour in processingHours:
 
-                # squalls groups
-                for eventGroup in modelParams.CALCULATIONS:
+                dateTimeObject = datetime.strptime(newDate, '%Y%m%d%H')
+                dateTimeObject = dateTimeObject + timedelta(hours=int(hour))
+                trueDateTime = dateTimeObject.strftime("%Y%m%d.%H")  # in UTC
+                # так как прогнозные даты указаны с количеством часов вперед на которое прогнозируется
+                # реальная дата прогноза может быть смещена вперед, поэтому ее надо рассчитывать реальный срок прогноза
+                # gfs.2021072100.024.dls.tif -> gfs.2021072200.000.dls.tif
+                # make true date
+                rasterTrueDateTime = trueDateTime
 
-                    eventGroupName = eventGroup.name
-                    eventGroupOut = []
+                for group in modelParams.CALCULATIONS:
 
-                    # make true date
-                    dateTimeObject = datetime.strptime(archiveDate, '%Y%m%d%H')
-                    dateTimeObject = dateTimeObject + timedelta(hours=int(hour))
-                    actualDate = dateTimeObject.strftime("%Y%m%d.%H")  # in UTC
+                    resultArray = group.calculation(extractDateFolder, newDate, hour)
 
-                    # outRaster
-                    outRasterPath = os.path.join(
-                        outMaskFolder,
-                        # f'{model}.{archiveDate}.{hour}.{eventGroupName}.{actualDate}.tif'  # original name
-                        f'{modelName}.{forecastType}.{actualDate}.{eventGroupName}.tif'   # with true date
-                    )
+                    rasterName = f'{modelName}.{forecastType}.{rasterTrueDateTime}.{group.name}.tif'
+                    outRasterPath = os.path.join(outMaskFolder, rasterName)
                     create_template_raster(
                         outRasterPath,
-                        x_size=modelParams.RASTER_X_SIZE,
-                        y_size=modelParams.RASTER_Y_SIZE,
-                        geo_transform=modelParams.RASTER_GEO_TRANSFORM
+                        modelParams.RASTER_X_SIZE,
+                        modelParams.RASTER_Y_SIZE,
+                        modelParams.RASTER_GEO_TRANSFORM
                     )
+
                     ds = gdal.Open(outRasterPath, gdal.GA_Update)
-
-                    for eventSubGroup in eventGroup.subgroups:
-
-                        levelCode = eventSubGroup.level_code
-
-
-                        conditions = []
-                        for conditionGroup in eventSubGroup.condition_groups:
-                            masks = []
-                            for condition in conditionGroup.conditions:
-                                # TODO Refactor format for input file
-                                rasterName = f'{modelName}.{archiveDate}.0{hour}.{condition.index_name}.tif'
-                                rasterPath = os.path.join(extractFolder, rasterName)
-                                mask = raster_2_binary(rasterPath, condition.calculation)
-                                masks.append(mask)
-
-                            allSubConditions = np.stack(masks, axis=2)
-
-                            # check that in each pixel all condition is true(1)
-                            # if one condition is false in pixel wil be zero
-                            # if all condition is true in pixel will be one
-                            result = np.amin(allSubConditions, axis=2)
-                            conditions.append(result)
-
-                        # merged condition for one subgroup e.g. squall_L1
-                        mergedCondition = np.stack(conditions, axis=2)
-                        # we may have few condition for one subgroup. It means that
-                        # for one subgroup may be few different condition groups
-                        # and it may be detected by one or other condition group
-                        # so, firstly we merge all subcondition together
-                        # if at least in one pixel subcondition is true return 1
-                        # if all subcondition is negative return 0
-                        result = mergedCondition.any(axis=2).astype(np.uint8)
-                        # replace selected value with subgroup code
-                        result = np.where(result != 0, levelCode, 0)
-                        eventGroupOut.append(result)
-
-                    # select most danger group for each pixel
-                    eventGroupOut = np.stack(eventGroupOut, axis=2)
-                    # need mask for zero values
-                    eventGroupOut = np.ma.masked_equal(eventGroupOut, 0.0)
-                    eventGroupOut = eventGroupOut.min(axis=2)
-
-                    ds.GetRasterBand(1).WriteArray(eventGroupOut.filled(fill_value=0))
+                    ds.GetRasterBand(1).WriteArray(resultArray)
                     ds = None
 
-            # convert raster to vector
-            for rasterName in os.listdir(outMaskFolder):
-                inRasterPath = os.path.join(outMaskFolder, rasterName)
+                    created_masks.append(rasterName)
 
-                vektorName = rasterName.replace('tif', 'geojson')
-
-                outVektorPath = os.path.join(outVektorFolder, vektorName)
-                polygonize_raster(inRasterPath, outVektorPath, 4326, frmt="GeoJSON")
+        vectorize_rasters(created_masks, outMaskFolder, outVectorFolder)
+        current_app.logger.info(f'vectorization ends for model {modelName}')
 
 
+def check_new_files(modelName, modelParams: ModelParams, startDateString, dwnFld) -> List[str]:
+    """
+    Check new files for model. If now new files return empty list
+
+    :return: List of names of new zips with extension (sample [070212021.zip])]
+    """
+
+    url = modelParams.DOWNLOAD_URL
+    modelDwnFld = os.path.join(dwnFld, modelName)
+
+    newZipNames = check_new_zips(
+        url,
+        modelDwnFld,
+        startDate=datetime.strptime(startDateString, "%Y%m%d")
+    )
+    current_app.logger.info(f'For {modelName} found new archives {",".join(newZipNames)}')
+
+    if len(newZipNames) == 0:
+        current_app.logger.info(f'Not found new archives for model {modelName}')
+        return []
+
+    return newZipNames
+
+
+def download_files(newFiles, modelName, modelParams: ModelParams, dwnFld: os.PathLike):
+    for zipName in newFiles:
+        modelUrl = modelParams.DOWNLOAD_URL
+        download_file_util(modelUrl, zipName, modelName, dwnFld)  # './2021051512.zip'
+
+
+def extract_files(zipNames, dwnFld, modelParams: ModelParams, extractFolder):
+    # indicatorsForExtract = set()
+    # for eventGroup in modelParams.CALCULATIONS:
+    #     for eventSubGroup in eventGroup.subgroups:
+    #         for conditionGroup in eventSubGroup.condition_groups:
+    #             for condition in conditionGroup.conditions:
+    #                 indicatorsForExtract.add(condition.index_name)
+
+
+    for zipName in zipNames:
+        archiveDate = zipName.split('.zip')[0]  # 2021051512
+        zipPath = os.path.join(dwnFld, zipName)
+        extractFolder = os.path.join(extractFolder, archiveDate)
+
+        # check that folder exists
+        if not os.path.exists(extractFolder):
+            os.mkdir(extractFolder)
+
+        #extract_rasters(zipPath, extractFolder, indicatorsForExtract)
+        extract_rasters(zipPath, extractFolder, usedIndexes)
+
+
+def vectorize_rasters(rasterNames: List[str], inRasterFolder, outVectorFolder):
+    for rasterName in rasterNames:
+        inRasterPath = os.path.join(inRasterFolder, rasterName)
+
+        vectorName = rasterName.replace('tif', 'geojson')
+
+        outVectorPath = os.path.join(outVectorFolder, vectorName)
+        polygonize_raster(inRasterPath, outVectorPath, 4326, frmt="GeoJSON")

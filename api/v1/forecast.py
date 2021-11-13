@@ -10,11 +10,11 @@ from flask import (
 )
 from werkzeug import exceptions
 
-from config.models import ModelParams, EventGroup
-from tasks.process_forecast import celery
-from tasks.process_forecast import create_task, download_file, process_new_files
+from models.forecast_models import ModelParams, CalcGroup
+from tasks.process_forecast import celery, process_new_files
+from tasks.process_forecast import create_task, download_file
 from processing.utils import get_index_raster_from_zip
-from config.forecast_models import MODELS, models
+from config.used_models import MODELS, models
 
 api = Blueprint('forecast', __name__)
 
@@ -170,6 +170,8 @@ def run_download():
 @api.route('/processing_debug/')
 def run_processing():
     # TODO handler error
+    #process_new_files()
+    #process_new_files_v2()
     process_new_files()
     return jsonify('ok'), 200
 
@@ -301,7 +303,7 @@ def get_legend():
 
     selectedModel = models[model]
 
-    selectedGroup: EventGroup = next(filter(lambda x: x.name == groupName, selectedModel.CALCULATIONS))
+    selectedGroup: CalcGroup = next(filter(lambda x: x.name == groupName, selectedModel.CALCULATIONS))
 
     serialized_object = [
         {
