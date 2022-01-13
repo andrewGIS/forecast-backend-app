@@ -1,27 +1,35 @@
 #TODO host to env , folder to env,
 version: "3.4"
+
+x-common-variables: &common-variables
+  FIRST_ZIP_DATE: 20220112
+
+x-common-backend: &common-backend-variables
+  CELERY_BROKER_URL: redis://redis:6379
+  RESULT_BACKEND: redis://redis:6379
+
 services:
   backend:
-    # check why empty stout and try to send params
+    container_name: backend-flask
     environment:
-      - CONFIG_TYPE=config.settings.ProductionConfig
-      - FLASK_APP=application.py
-      - FIRST_ZIP_DATE=20210809 # in YYYYmmdd format
+      CONFIG_TYPE: config.settings.DevelopmentConfig
+      FLASK_APP: application.py
+      <<: *common-variables
     image: forecast_backend:latest
     volumes:
       - "D://Work//_new_features//forecast//app_python//data:/flask-app/data"
-    #command: python -m flask run
     command: gunicorn -w 1 -b 0.0.0.0:5000 wsgi:app --worker-class gevent
     ports:
-    - "5001:5000"
+      - "5001:5000"
   redis:
+    container_name: redis-db
     image: redis:latest
   api-worker:
+    container_name: worker
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379
-      - RESULT_BACKEND=redis://redis:6379
-      - CONFIG_TYPE=config.settings.ProductionConfig
-      - FIRST_ZIP_DATE=20210809
+      CONFIG_TYPE: config.settings.DevelopmentConfig
+      <<: *common-variables
+      <<: *common-backend-variables
     image: forecast_backend:latest
     volumes:
       - "D://Work//_new_features//forecast//app_python//data:/flask-app/data"
@@ -30,13 +38,20 @@ services:
       - redis
       - api-beat
   api-beat:
+    container_name: sheduler
     environment:
-      - CONFIG_TYPE=config.settings.ProductionConfig
-      - CELERY_BROKER_URL=redis://redis:6379
-      - RESULT_BACKEND=redis://redis:6379
-      - FIRST_ZIP_DATE=20210809
+      CONFIG_TYPE: config.settings.ProductionConfig
+      <<: *common-backend-variables
+      <<: *common-variables
     image: forecast_backend:latest
     command: celery -A celery_worker.celery beat --loglevel=info
     depends_on:
       - redis
       - backend
+  frontend:
+    container_name: frontend
+    depends_on:
+      - api-beat
+    image: forecast_frontend:local
+    ports:
+      - "5002:80"
