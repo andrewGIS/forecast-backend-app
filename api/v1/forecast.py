@@ -37,13 +37,6 @@ def get_forecast():
             enum: ['gfs', 'icon']
             required: true
             default: 'gfs'
-          - name: forecast_type
-            description: Тип прогноза 00 - от полночи, 12 - от полудня
-            in: query
-            type: string
-            enum: ['00', '12']
-            required: true
-            default: '00'
           - name: date
             description: Дата в формате YYYYmmdd UTC, на который необходим прогноз
             in: query
@@ -87,25 +80,17 @@ def get_forecast():
               $ref: '#/definitions/Error'
         """
     modelName = request.args.get('model', None)  # use default value replace 'None'
-    forecastType = request.args.get('forecast_type', None)  # use default value replace 'None'
     date = request.args.get('date', None)
     hour = request.args.get('hour', None)
     group = request.args.get('group', None)
     dataType = request.args.get('datatype', None)
 
-    if not all([modelName, forecastType, date, hour, group]):
+    if not all([modelName, date, hour, group]):
         return jsonify(error="Not all params specified"), exceptions.BadRequest.code
 
     if modelName not in MODELS:
         return jsonify(
             error=f"Unknown model, known models are {','.join(MODELS)}"
-        ), exceptions.BadRequest.code
-
-    # TODO move to config
-    forecastTypes = ["00", "12"]
-    if forecastType not in forecastTypes:
-        return jsonify(
-            error=f"Unknown model, known forestTypes are {','.join(forecastTypes)}"
         ), exceptions.BadRequest.code
 
     try:
@@ -133,24 +118,31 @@ def get_forecast():
             error=f"Unknown data format known hour are vector, raster"
         ), exceptions.BadRequest.code
 
+    # проверяем есть ли вектор (или растр) с прогнозом на эту дату (пытаемся взять прогноз и от 00 и от 12
+    # как только нашли - отдаем, сначала проверяем более поздний срок (от 12 часов), потом от 00 часов
     fld = current_app.config['VECTOR_FLD'] if dataType == 'vector' else current_app.config['MASK_FLD']
     extension = 'geojson' if dataType == 'vector' else 'tif'
-    fileToSend = os.path.join(fld, f'{modelName}.{forecastType}.{date}.{hour}.{group}.{extension}')
 
-    if not os.path.exists(fileToSend):
-        return jsonify(error="No json for specific date"), exceptions.BadRequest.code
+    forecastTypes = ["12", "00"]
+    for forecastType in forecastTypes:
+        fileToSend = os.path.join(fld, f'{modelName}.{forecastType}.{date}.{hour}.{group}.{extension}')
 
-    if dataType == 'vector':
-        with open(fileToSend) as f:
-            data = json.load(f)
-        return data
+        if os.path.exists(fileToSend):
 
-    if dataType == 'raster':
-        return send_file(
-            fileToSend,
-            mimetype="image/tif",
-            download_name=f'{modelName}.{forecastType}.{date}.{hour}.{group}.tif'
-        )
+            if dataType == 'vector':
+                with open(fileToSend) as f:
+                    data = json.load(f)
+                return data
+
+            if dataType == 'raster':
+                return send_file(
+                    fileToSend,
+                    mimetype="image/tif",
+                    download_name=f'{modelName}.{forecastType}.{date}.{hour}.{group}.tif'
+                )
+            break
+
+    return jsonify(error="No json for specific date"), exceptions.BadRequest.code
 
 
 @api.route('/test_task/', methods=['GET'])
