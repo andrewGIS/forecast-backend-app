@@ -15,6 +15,7 @@ from tasks.process_forecast import celery, process_new_files
 from tasks.process_forecast import create_task, download_file
 from processing.utils import get_index_raster_from_zip
 from config.used_models import MODELS, models
+from processing.utils import get_index_rasters_by_date, available_dates
 
 api = Blueprint('forecast', __name__)
 
@@ -314,4 +315,34 @@ def get_legend():
         for subevent in selectedGroup.subgroups
     ]
 
-    return jsonify({"legend": serialized_object}), 200
+@api.route('/get_dates', methods=['GET'])
+def get_dates():
+    """Aviable dates for forecasting
+    ---
+    parameters:
+      - name: model
+        in: query
+        type: string
+        enum: ['gfs', 'icon']
+        required: true
+        default: 'gfs'
+    definitions:
+      Dates:
+        type: object
+        properties:
+          legend:
+            type: array
+            items:
+              $ref: '#/definitions/DateStr'
+      DateStr:
+        type: string
+    responses:
+      200:
+        description: Avialable dates
+        schema:
+          $ref: '#/definitions/Dates'
+    """
+    model = request.args.get('model')
+    vector_folder = current_app.config['VECTOR_FLD']
+
+    return jsonify(available_dates(model, vector_folder))

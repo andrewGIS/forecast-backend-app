@@ -155,3 +155,18 @@ def download_file_util(baseUrl, zipName, model, dwnFld):
     return save_path_zip
 
 
+def available_dates(model_name, vectors_folder):
+    """
+    Список дат по которым есть прогнозы в формате YYYY-MM-DD (список)
+    по модели
+    model_name модель для поиска
+    vector_folder папка где искать прогнозы
+    """
+
+    def str_to_date(date_as_str):
+        return f'{date_as_str[:4]}-{date_as_str[4:6]}-{date_as_str[6:9]}'
+
+    return list(
+        set(
+            [str_to_date(f.split(".")[2]) for f in os.listdir(vectors_folder) if model_name in f]
+        ))
