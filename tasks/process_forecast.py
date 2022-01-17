@@ -143,7 +143,7 @@ def download_files(newFiles, modelName, modelParams: ModelParams, dwnFld: os.Pat
         download_file_util(modelUrl, zipName, modelName, dwnFld)  # './2021051512.zip'
 
 
-def extract_files(zipNames, dwnFld, modelParams: ModelParams, extractFolder):
+def extract_files(zipNames, dwnFld, extractFolder):
     # indicatorsForExtract = set()
     # for eventGroup in modelParams.CALCULATIONS:
     #     for eventSubGroup in eventGroup.subgroups:
@@ -155,14 +155,14 @@ def extract_files(zipNames, dwnFld, modelParams: ModelParams, extractFolder):
     for zipName in zipNames:
         archiveDate = zipName.split('.zip')[0]  # 2021051512
         zipPath = os.path.join(dwnFld, zipName)
-        extractFolder = os.path.join(extractFolder, archiveDate)
+        destinationFolder = os.path.join(extractFolder, archiveDate)
 
         # check that folder exists
         if not os.path.exists(extractFolder):
             os.mkdir(extractFolder)
 
         #extract_rasters(zipPath, extractFolder, indicatorsForExtract)
-        extract_rasters(zipPath, extractFolder, usedIndexes)
+        extract_rasters(zipPath, destinationFolder, usedIndexes)
 
 
 def vectorize_rasters(rasterNames: List[str], inRasterFolder, outVectorFolder):
