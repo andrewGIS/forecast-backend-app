@@ -280,9 +280,9 @@ def get_legend():
         properties:
           levelCode:
             type: number
-          name:
-            type: string
           alias:
+            type: string
+          color:
             type: string
     responses:
       200:
@@ -294,18 +294,51 @@ def get_legend():
     model = request.args.get('model')
     groupName = request.args.get('group')
 
-    selectedModel = models[model]
+    # selectedModel = models[model]
+    #
+    # selectedGroup: CalcGroup = next(filter(lambda x: x.name == groupName, selectedModel.CALCULATIONS))
+    #
+    # serialized_object = [
+    #     {
+    #         "levelcode": subevent.level_code,
+    #         "name": subevent.name,
+    #         "alias": subevent.alias
+    #     }
+    #     for subevent in selectedGroup.subgroups
+    # ]
 
-    selectedGroup: CalcGroup = next(filter(lambda x: x.name == groupName, selectedModel.CALCULATIONS))
-
-    serialized_object = [
-        {
-            "levelcode": subevent.level_code,
-            "name": subevent.name,
-            "alias": subevent.alias
+    # TODO придумать что-то получше
+    # TODO вынести во внешний файл
+    legend_dict = {
+        "gfs": {
+            "squall": [
+                {
+                    "levelCode": 1,
+                    "alias": "Высокая вероятность шквала",
+                    "color": "#cd363c"
+                },
+                {
+                    "levelCode": 2,
+                    "alias": "Средняя вероятность шквала",
+                    "color": "#e24a4b"
+                },
+                {
+                    "levelCode": 3,
+                    "alias": "Низкая вероятность шквала",
+                    "color": "#000000"
+                },
+                {
+                    "levelCode": 4,
+                    "alias": "Крайне низкая вероятность шквала",
+                    "color": "#ff6f6b"
+                }
+            ]
         }
-        for subevent in selectedGroup.subgroups
-    ]
+    }
+
+    # return jsonify({"legend": serialized_object}), 200
+    return jsonify(legend_dict[model][groupName])
+
 
 @api.route('/get_dates', methods=['GET'])
 def get_dates():
