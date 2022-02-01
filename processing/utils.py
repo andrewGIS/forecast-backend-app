@@ -44,13 +44,23 @@ def get_index_raster_from_zip(model, date, forecastType, hour, indexName):
     if model not in MODELS:
         return
 
-    inArchive = os.path.join(zipFld, model, f'{date}{forecastType}.zip')
+    # проверяем есть ли вектор (или растр) с прогнозом на эту дату (пытаемся взять прогноз и от 00 и от 12
+    # как только нашли - отдаем, сначала проверяем более поздний срок (от 12 часов), потом от 00 часов
+    # еще отдаем во вью чтобы увидели из какой папки мы взяли
+    forecastTypes = ["12", "00"]
+
+    inArchive = os.path.join(zipFld, model, f'{date}{forecastTypes[0]}.zip')
+    existedForecast = forecastTypes[0]
+    if not os.path.exists(inArchive):
+        inArchive = os.path.join(zipFld, model, f'{date}{forecastTypes[1]}.zip')
+        existedForecast = forecastTypes[1]
+
     out_image = io.BytesIO()
     with ZipFile(inArchive, 'r') as zipObject:
-        fileToExtract = f'{model}.{date}{forecastType}.0{hour}.{indexName}.tif'
+        fileToExtract = f'{model}.{date}{existedForecast}.0{hour}.{indexName}.tif'
         out_image.write(zipObject.read(fileToExtract))
     out_image.seek(0)
-    return out_image
+    return out_image, existedForecast
 
 
 def raster_2_binary(rasterPath: str, function) -> np.array:

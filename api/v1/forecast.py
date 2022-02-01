@@ -197,13 +197,6 @@ def get_index():
         type: string
         required: true
         default: None
-      - name: forecast_type
-        description: Тип прогноза 00 - от полночи, 12 - от полудня
-        in: query
-        type: string
-        enum: ['00', '12']
-        required: true
-        default: '00'
       - name: hour
         description: Час для которого запрашивает прогноз (UTC)
         enum: ['03', '06', '09', '12', '15', '18', '21', '24']
@@ -235,18 +228,17 @@ def get_index():
     """
     model = request.args.get('model')
     date = request.args.get('date')
-    forecastType = request.args.get('forecast_type')
     hour = request.args.get('hour')
     indexName = request.args.get('index_name')
 
-    if not all([model, date, forecastType, hour, indexName]):
+    if not all([model, date, hour, indexName]):
         return "Not all params specified"
 
-    file = get_index_raster_from_zip(model, date, forecastType, hour, indexName)
+    file, existedForecast = get_index_raster_from_zip(model, date, hour, indexName)
     return send_file(
         file,
         mimetype="image/tif",
-        download_name=f'{model}.{date}{forecastType}.{hour}.{indexName}.tif'
+        download_name=f'{model}.{date}{existedForecast}.{hour}.{indexName}.tif'
     )
 
 
